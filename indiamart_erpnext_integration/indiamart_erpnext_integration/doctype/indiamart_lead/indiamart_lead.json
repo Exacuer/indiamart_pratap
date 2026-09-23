@@ -12,7 +12,8 @@
   "output",
   "column_break_6",
   "created_on",
-  "integration_request"
+  "integration_request",
+  "prospect"
  ],
  "fields": [
   {
@@ -61,6 +62,14 @@
    "fieldname": "integration_request",
    "fieldtype": "Data",
    "label": "Integration Request",
+   "read_only": 1
+  },
+  {
+   "fieldname": "prospect",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Prospect",
+   "options": "Prospect",
    "read_only": 1
   }
  ],
