@@ -4,7 +4,7 @@ authors = [
     { name = "abhishek.kumar@exacuer.com", email = "abhishek.kumar@exacuer.com"}
 ]
 description = "indiamart erpnext integration"
-requires-python = ">=3.14"
+requires-python = ">=3.11"
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
