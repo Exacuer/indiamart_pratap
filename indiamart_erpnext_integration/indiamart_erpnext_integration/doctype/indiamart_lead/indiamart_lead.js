@@ -3,8 +3,8 @@
 
 frappe.ui.form.on('Indiamart Lead', {
 	refresh: function (frm) {
-		if (frm.doc.status == 'Queued') {
-			frm.add_custom_button('Retry Lead Creation', () => {
+		if (['Queued', 'Failed'].includes(frm.doc.status)) {
+			frm.add_custom_button('Retry Prospect Creation', () => {
 				frm.call('retry_lead_creation')
 					.then(r => {
 						console.log(r)
@@ -55,25 +55,25 @@ frappe.ui.form.on('Indiamart Lead', {
 			})
 			$('div').find('.document-link[data-doctype="ToDo"]').after(link);
 		}
-		// Lead connection
-		$('div').find('.document-link[data-doctype="Lead"]').remove();
+		// Prospect connection
+		$('div').find('.document-link[data-doctype="Prospect"]').remove();
 		if (frm.is_new() == undefined && frm.doc.query_id != undefined) {
-			frappe.call('indiamart_erpnext_integration.indiamart_erpnext_integration.doctype.indiamart_lead.indiamart_lead.get_connected_lead_for_indiamart_lead', {
+			frappe.call('indiamart_erpnext_integration.indiamart_erpnext_integration.doctype.indiamart_lead.indiamart_lead.get_connected_prospect_for_indiamart_lead', {
 				query_id_cf: frm.doc.query_id
 			}).then(r => {
 				if (r.message && r.message != undefined) {
 					let count = r.message.length
 					let link = $(`
-			<div class="document-link" data-doctype="Lead">
-				<div class="document-link-badge" data-doctype="Lead"> <span class="count">${count}</span> <a
-					class="badge-link">Lead</a> </div> <span class="open-notification hidden"
-				title="Open Lead"> </span></div>
+			<div class="document-link" data-doctype="Prospect">
+				<div class="document-link-badge" data-doctype="Prospect"> <span class="count">${count}</span> <a
+					class="badge-link">Prospect</a> </div> <span class="open-notification hidden"
+				title="Open Prospect"> </span></div>
 			`);
 					link.on('click', function () {
 						frappe.route_options = {
 							'name': ['in', r.message]
 						};
-						frappe.set_route("List", "Lead", "List");
+						frappe.set_route("List", "Prospect", "List");
 					})
 					$('div').find('.document-link[data-doctype="ToDo"]').after(link);
 				}

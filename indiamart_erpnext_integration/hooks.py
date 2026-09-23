@@ -33,6 +33,7 @@ app_license = "None"
 # include js in doctype views
 doctype_js = {
 	"Lead" : "public/js/lead.js",
+	"Prospect" : "public/js/prospect.js",
 	"Integration Request" : "public/js/integration_request.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -109,7 +110,7 @@ doctype_js = {
 # ---------------
 scheduler_events = {
 	"cron": {
-		"0/5 * * * *": [
+		"1/6 * * * *": [
 			"indiamart_erpnext_integration.indiamart_erpnext_controller.auto_pull_indiamart_leads"
 		]
 	}
@@ -197,6 +198,11 @@ user_data_fields = [
 fixtures = [
       {
         "dt": "Custom Field", 
-        "filters": [["name", "in", ["Lead-indiamart_section","Lead-query_id_cf"	]]]
+        "filters": [["name", "in", [
+			"Lead-indiamart_section",
+			"Lead-query_id_cf",
+			"Prospect-indiamart_section",
+			"Prospect-query_id_cf"
+		]]]
       }
 ]

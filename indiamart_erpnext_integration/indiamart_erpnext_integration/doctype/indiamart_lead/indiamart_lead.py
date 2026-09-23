@@ -13,20 +13,28 @@ from indiamart_erpnext_integration.indiamart_erpnext_controller import make_erpn
 class IndiamartLead(Document):
 		def after_insert(self):
 			frappe.db.set_value('Indiamart Lead', self.name, 'created_on', self.creation)
-			indiamart_lead_json=json.loads(self.indiamart_lead_json)
-			indiamart_lead_name=self.name
-			enqueue(method='indiamart_erpnext_integration.indiamart_erpnext_controller.make_erpnext_lead_from_inidamart',queue='long', **{"lead_values": indiamart_lead_json, "indiamart_lead_name":indiamart_lead_name})
-			return
+			try:
+				indiamart_lead_json = json.loads(self.indiamart_lead_json or "{}")
+				make_erpnext_lead_from_inidamart(indiamart_lead_json, self.name)
+			except Exception:
+				frappe.log_error(title=_("Indiamart Error"), message=frappe.get_traceback())
+				frappe.db.set_value("Indiamart Lead", self.name, {
+					"status": "Failed",
+					"output": "Prospect creation failed. Check Error Log.",
+				})
 
 		@frappe.whitelist()
 		def retry_lead_creation(self):
-			indiamart_lead_json=json.loads(self.indiamart_lead_json)
-			indiamart_lead_name=self.name
-			output=make_erpnext_lead_from_inidamart(indiamart_lead_json,indiamart_lead_name)
-			if output:
-				frappe.msgprint(_("Output is {0}.").format(frappe.bold(output)), alert=False,indicator="green")
-			else:
-				frappe.msgprint(_("Error occured. Please check error log."), alert=False,indicator="red")
+			try:
+				indiamart_lead_json = json.loads(self.indiamart_lead_json)
+				output = make_erpnext_lead_from_inidamart(indiamart_lead_json, self.name)
+				if output:
+					frappe.msgprint(_("Output is {0}.").format(frappe.bold(output)), alert=False, indicator="green")
+				else:
+					frappe.msgprint(_("Error occured. Please check error log."), alert=False, indicator="red")
+			except Exception:
+				frappe.log_error(title=_("Indiamart Error"), message=frappe.get_traceback())
+				frappe.msgprint(_("Error occured. Please check error log."), alert=False, indicator="red")
 
 @frappe.whitelist()
 def get_connected_indiamart_lead(query_id_cf):
@@ -79,4 +87,15 @@ where lead.query_id_cf =%s""",
 			l_list.append(l.l)
 		return l_list
 	else:
-		return [] 
+		return []
+
+
+@frappe.whitelist()
+def get_connected_prospect_for_indiamart_lead(query_id_cf):
+	if not query_id_cf or not frappe.get_meta("Prospect").has_field("query_id_cf"):
+		return []
+	return frappe.db.get_all(
+		"Prospect",
+		filters={"query_id_cf": query_id_cf},
+		pluck="name",
+	) 
