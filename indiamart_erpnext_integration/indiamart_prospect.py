@@ -273,6 +273,38 @@ def _apply_indiamart_fields(doc, lead_values):
 	if frappe.get_meta("Prospect").has_field("custom_customer_source"):
 		doc.custom_customer_source = get_customer_source()
 
+	# Overview Contact Person / Mobile / Email (pratap custom fields)
+	_apply_overview_contact_fields(doc, lead_values)
+
+
+def _apply_overview_contact_fields(doc, lead_values):
+	"""Fill Prospect Overview fields used on Desk (not only Indiamart custom_* sender fields)."""
+	from frappe.utils import validate_email_address
+
+	meta = frappe.get_meta("Prospect")
+	sender_name = cstr(lead_values.get("SENDER_NAME")).strip()
+	email = cstr(lead_values.get("SENDER_EMAIL")).strip() or cstr(lead_values.get("SENDER_EMAIL_ALT")).strip()
+	mobile = (
+		cstr(lead_values.get("SENDER_MOBILE")).strip()
+		or cstr(lead_values.get("SENDER_MOBILE_ALT")).strip()
+		or cstr(lead_values.get("SENDER_PHONE")).strip()
+	)
+	company_name = cstr(lead_values.get("SENDER_COMPANY")).strip() or cstr(doc.company_name).strip()
+
+	if meta.has_field("custom_contact_person") and sender_name:
+		doc.custom_contact_person = sender_name[:140]
+	if meta.has_field("custom_email") and email:
+		try:
+			validate_email_address(email, throw=True)
+			doc.custom_email = email[:140]
+		except Exception:
+			# Keep Indiamart custom_sender_email; skip Overview Email if invalid
+			pass
+	if meta.has_field("custom_mobile_no") and mobile:
+		doc.custom_mobile_no = mobile[:140]
+	if meta.has_field("custom_customer_name") and company_name and not doc.get("custom_customer_name"):
+		doc.custom_customer_name = company_name[:140]
+
 
 def _resolve_territory(lead_values):
 	settings = frappe.get_cached_doc("Indiamart Settings")
