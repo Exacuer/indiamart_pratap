@@ -275,6 +275,101 @@ def _apply_indiamart_fields(doc, lead_values):
 
 	# Overview Contact Person / Mobile / Email (pratap custom fields)
 	_apply_overview_contact_fields(doc, lead_values)
+	_apply_overview_location_fields(doc, lead_values)
+
+
+def _normalize_phone(raw):
+	"""Normalize to Frappe Phone control format: +91-XXXXXXXXXX (exactly one hyphen)."""
+	raw = cstr(raw).strip()
+	if not raw:
+		return ""
+
+	digits = "".join(ch for ch in raw if ch.isdigit())
+	if not digits:
+		return ""
+
+	# Strip leading country code 91 when present
+	if digits.startswith("91") and len(digits) > 10:
+		digits = digits[2:]
+
+	# Prefer last 10 digits (Indian mobile / phone)
+	if len(digits) >= 10:
+		digits = digits[-10:]
+		return "+91-{0}".format(digits)
+
+	return ""
+
+
+def _safe_phone(raw):
+	"""Return a Frappe-valid phone, or empty string if missing / invalid."""
+	from frappe.utils import validate_phone_number
+
+	raw = cstr(raw).strip()
+	if not raw:
+		return ""
+
+	normalized = _normalize_phone(raw)
+	if not normalized:
+		return ""
+
+	try:
+		if validate_phone_number(normalized, throw=False):
+			return normalized
+	except Exception:
+		pass
+	return ""
+
+
+def _collect_phones(lead_values):
+	"""Return (valid [(phone, is_mobile), ...], invalid [raw, ...])."""
+	candidates = [
+		(lead_values.get("SENDER_MOBILE"), True),
+		(lead_values.get("SENDER_MOBILE_ALT"), True),
+		(lead_values.get("SENDER_PHONE"), False),
+		(lead_values.get("SENDER_PHONE_ALT"), False),
+	]
+	valid = []
+	invalid = []
+	seen = set()
+	for raw, is_mobile in candidates:
+		raw = cstr(raw).strip()
+		if not raw:
+			continue
+		phone = _safe_phone(raw)
+		if not phone:
+			if raw not in invalid:
+				invalid.append(raw)
+			continue
+		if phone in seen:
+			continue
+		seen.add(phone)
+		valid.append((phone, is_mobile))
+	return valid, invalid
+
+
+def _add_invalid_phone_comment(prospect_name, invalid_phones):
+	"""Record skipped invalid phones on Prospect without blocking create."""
+	if not prospect_name or not invalid_phones:
+		return
+	try:
+		text = _("Invalid phone number(s) from IndiaMART (skipped): {0}").format(
+			", ".join(frappe.utils.escape_html(p) for p in invalid_phones)
+		)
+		prospect = frappe.get_doc("Prospect", prospect_name)
+		prospect.add_comment("Comment", text=text)
+		prospect.append(
+			"notes",
+			{
+				"note": "<div>{0}</div>".format(text),
+				"added_by": frappe.session.user,
+				"added_on": now_datetime(),
+			},
+		)
+		prospect.flags.ignore_mandatory = True
+		prospect.flags.ignore_permissions = True
+		prospect.save()
+	except Exception:
+		frappe.log_error(title=_("Indiamart Invalid Phone Comment Error"), message=frappe.get_traceback())
 
 
 def _apply_overview_contact_fields(doc, lead_values):
@@ -284,11 +379,8 @@ def _apply_overview_contact_fields(doc, lead_values):
 	meta = frappe.get_meta("Prospect")
 	sender_name = cstr(lead_values.get("SENDER_NAME")).strip()
 	email = cstr(lead_values.get("SENDER_EMAIL")).strip() or cstr(lead_values.get("SENDER_EMAIL_ALT")).strip()
-	mobile = (
-		cstr(lead_values.get("SENDER_MOBILE")).strip()
-		or cstr(lead_values.get("SENDER_MOBILE_ALT")).strip()
-		or cstr(lead_values.get("SENDER_PHONE")).strip()
-	)
+	valid_phones, _invalid = _collect_phones(lead_values)
+	mobile = valid_phones[0][0] if valid_phones else ""
 	company_name = cstr(lead_values.get("SENDER_COMPANY")).strip() or cstr(doc.company_name).strip()
 
 	if meta.has_field("custom_contact_person") and sender_name:
@@ -301,9 +393,63 @@ def _apply_overview_contact_fields(doc, lead_values):
 			# Keep Indiamart custom_sender_email; skip Overview Email if invalid
 			pass
 	if meta.has_field("custom_mobile_no") and mobile:
-		doc.custom_mobile_no = mobile[:140]
+		doc.custom_mobile_no = mobile
 	if meta.has_field("custom_customer_name") and company_name and not doc.get("custom_customer_name"):
 		doc.custom_customer_name = company_name[:140]
+
+
+def _apply_overview_location_fields(doc, lead_values):
+	"""Fill Address & Contact tab location links from IndiaMART / Pincode master."""
+	meta = frappe.get_meta("Prospect")
+	city = cstr(lead_values.get("SENDER_CITY")).strip()
+	state = cstr(lead_values.get("SENDER_STATE")).strip()
+	pincode = cstr(lead_values.get("SENDER_PINCODE")).strip()
+	country_iso = cstr(lead_values.get("SENDER_COUNTRY_ISO")).strip().upper()
+	country = "India" if country_iso in ("", "IN") else (frappe.db.get_value("Country", {"code": country_iso}, "name") or "India")
+
+	# Prefer Pincode master (has city / territory / country)
+	pin_row = None
+	if pincode and frappe.db.exists("DocType", "Pincode") and frappe.db.exists("Pincode", pincode):
+		pin_row = frappe.db.get_value(
+			"Pincode",
+			pincode,
+			["city", "territiry", "country"],
+			as_dict=True,
+		)
+
+	if meta.has_field("custom_country"):
+		doc.custom_country = (pin_row.country if pin_row and pin_row.country else country) or "India"
+
+	if meta.has_field("custom_postalcode") and pincode and frappe.db.exists("Pincode", pincode):
+		doc.custom_postalcode = pincode
+
+	resolved_city = (pin_row.city if pin_row and pin_row.city else city) or ""
+	if meta.has_field("custom_city_territory") and resolved_city:
+		if frappe.db.exists("Cities", resolved_city):
+			doc.custom_city_territory = resolved_city
+		else:
+			match = frappe.db.get_value("Cities", {"city": ["like", "%{0}%".format(resolved_city)]}, "name")
+			if match:
+				doc.custom_city_territory = match
+
+	resolved_state = (pin_row.territiry if pin_row and pin_row.territiry else state) or ""
+	if meta.has_field("custom_territory_state") and resolved_state:
+		if frappe.db.exists("Territory", resolved_state):
+			doc.custom_territory_state = resolved_state
+		else:
+			match = frappe.db.get_value(
+				"Territory",
+				{"territory_name": ["like", "%{0}%".format(resolved_state)]},
+				"name",
+			)
+			if match:
+				doc.custom_territory_state = match
+				resolved_state = match
+
+	if meta.has_field("custom_region") and doc.get("custom_territory_state"):
+		region = frappe.db.get_value("Territory", doc.custom_territory_state, "custom_region")
+		if region:
+			doc.custom_region = region
 
 
 def _resolve_territory(lead_values):
@@ -345,6 +491,8 @@ def _create_prospect(lead_values, company_name, note_html):
 	prospect.flags.ignore_permissions = True
 	prospect.insert()
 	_create_prospect_contact(prospect.name, lead_values)
+	_, invalid_phones = _collect_phones(lead_values)
+	_add_invalid_phone_comment(prospect.name, invalid_phones)
 	return prospect.name
 
 
@@ -363,6 +511,8 @@ def _update_existing_prospect(prospect_name, lead_values, note_html):
 	prospect.flags.ignore_permissions = True
 	prospect.save()
 	_create_prospect_contact(prospect.name, lead_values)
+	_, invalid_phones = _collect_phones(lead_values)
+	_add_invalid_phone_comment(prospect.name, invalid_phones)
 
 
 def _existing_linked_docs(prospect_name, parenttype):
@@ -383,14 +533,8 @@ def _create_prospect_contact(prospect_name, lead_values):
 		cstr(lead_values.get("SENDER_EMAIL")).strip(),
 		cstr(lead_values.get("SENDER_EMAIL_ALT")).strip(),
 	]
-	phones = [
-		(cstr(lead_values.get("SENDER_MOBILE")).strip(), True),
-		(cstr(lead_values.get("SENDER_MOBILE_ALT")).strip(), True),
-		(cstr(lead_values.get("SENDER_PHONE")).strip(), False),
-		(cstr(lead_values.get("SENDER_PHONE_ALT")).strip(), False),
-	]
 	emails = [e for e in emails if e]
-	phones = [p for p in phones if p[0]]
+	phones, _invalid = _collect_phones(lead_values)
 
 	if not emails and not phones:
 		return
@@ -412,6 +556,8 @@ def _create_prospect_contact(prospect_name, lead_values):
 		mobile_set = False
 		phone_set = False
 		for phone, is_mobile in phones:
+			if not phone or not cstr(phone).strip():
+				continue
 			row = {"phone": phone}
 			if is_mobile and not mobile_set:
 				row["is_primary_mobile_no"] = 1
@@ -439,7 +585,7 @@ def _sync_contact_details(contact, emails, phones):
 
 	existing_phones = {cstr(d.phone) for d in contact.phone_nos}
 	for phone, is_mobile in phones:
-		if phone in existing_phones:
+		if not phone or not cstr(phone).strip() or phone in existing_phones:
 			continue
 		row = {"phone": phone}
 		if is_mobile:
