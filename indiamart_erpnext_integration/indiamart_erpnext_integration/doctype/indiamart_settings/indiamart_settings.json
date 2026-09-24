@@ -99,11 +99,12 @@
    "options": "Territory"
   },
   {
-   "default": "IndiaMART",
+   "default": "IndiaMart",
    "description": "Set on Prospect.custom_customer_source for every Prospect created / updated from IndiaMART",
    "fieldname": "default_customer_source",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "label": "Customer Source",
+   "options": "Lead Source",
    "reqd": 1
   },
   {

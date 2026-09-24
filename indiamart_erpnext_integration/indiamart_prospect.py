@@ -71,20 +71,39 @@ def ensure_prospect_custom_fields():
 		insert_after = fieldname
 		created_or_moved = True
 
-	if not frappe.db.exists("Custom Field", {"dt": "Prospect", "fieldname": "custom_customer_source"}):
+	cf_name = frappe.db.exists("Custom Field", {"dt": "Prospect", "fieldname": "custom_customer_source"})
+	if not cf_name:
 		frappe.get_doc(
 			{
 				"doctype": "Custom Field",
 				"dt": "Prospect",
 				"fieldname": "custom_customer_source",
 				"label": "Customer Source",
-				"fieldtype": "Data",
+				"fieldtype": "Link",
+				"options": "Lead Source",
 				"insert_after": "prospect_owner",
 				"in_list_view": 1,
 				"in_standard_filter": 1,
 			}
 		).insert(ignore_permissions=True)
 		created_or_moved = True
+	else:
+		# Ensure Customer Source is a Link to Lead Source (older installs used Data).
+		# Fieldtype change Data→Link is blocked by Custom Field.validate — update via DB.
+		cf = frappe.db.get_value(
+			"Custom Field",
+			cf_name,
+			["fieldtype", "options"],
+			as_dict=True,
+		)
+		if cf and (cf.fieldtype != "Link" or cf.options != "Lead Source"):
+			frappe.db.set_value(
+				"Custom Field",
+				cf_name,
+				{"fieldtype": "Link", "options": "Lead Source"},
+				update_modified=False,
+			)
+			created_or_moved = True
 
 	if created_or_moved:
 		frappe.clear_cache(doctype="Prospect")
@@ -114,9 +133,29 @@ def get_prospect_owner():
 	)
 
 
+def ensure_lead_source(name):
+	"""Return the actual Lead Source name (handles MySQL case-insensitive match)."""
+	name = cstr(name).strip()
+	if not name:
+		return ""
+
+	# Return canonical DB name (MySQL collation treats IndiaMART == IndiaMart)
+	row = frappe.db.sql(
+		"SELECT name FROM `tabLead Source` WHERE LOWER(name) = %s LIMIT 1",
+		(name.lower(),),
+	)
+	if row:
+		return row[0][0]
+
+	doc = frappe.get_doc({"doctype": "Lead Source", "source_name": name})
+	doc.insert(ignore_permissions=True)
+	return doc.name
+
+
 def get_customer_source():
 	settings = frappe.get_cached_doc("Indiamart Settings")
-	return cstr(settings.get("default_customer_source")).strip() or "IndiaMART"
+	source = cstr(settings.get("default_customer_source")).strip() or "IndiaMart"
+	return ensure_lead_source(source)
 
 
 def get_default_company():
