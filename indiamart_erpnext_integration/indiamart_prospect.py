@@ -71,6 +71,21 @@ def ensure_prospect_custom_fields():
 		insert_after = fieldname
 		created_or_moved = True
 
+	if not frappe.db.exists("Custom Field", {"dt": "Prospect", "fieldname": "custom_customer_source"}):
+		frappe.get_doc(
+			{
+				"doctype": "Custom Field",
+				"dt": "Prospect",
+				"fieldname": "custom_customer_source",
+				"label": "Customer Source",
+				"fieldtype": "Data",
+				"insert_after": "prospect_owner",
+				"in_list_view": 1,
+				"in_standard_filter": 1,
+			}
+		).insert(ignore_permissions=True)
+		created_or_moved = True
+
 	if created_or_moved:
 		frappe.clear_cache(doctype="Prospect")
 		frappe.db.commit()
@@ -97,6 +112,11 @@ def get_prospect_owner():
 		or settings.get("default_lead_owner")
 		or frappe.session.user
 	)
+
+
+def get_customer_source():
+	settings = frappe.get_cached_doc("Indiamart Settings")
+	return cstr(settings.get("default_customer_source")).strip() or "IndiaMART"
 
 
 def get_default_company():
@@ -210,6 +230,9 @@ def _apply_indiamart_fields(doc, lead_values):
 	owner = get_prospect_owner()
 	if owner and not doc.prospect_owner:
 		doc.prospect_owner = owner
+
+	if frappe.get_meta("Prospect").has_field("custom_customer_source"):
+		doc.custom_customer_source = get_customer_source()
 
 
 def _resolve_territory(lead_values):

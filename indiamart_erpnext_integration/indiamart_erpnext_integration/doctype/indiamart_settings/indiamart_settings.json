@@ -17,6 +17,7 @@
   "column_break_5",
   "default_customer_group",
   "default_territory",
+  "default_customer_source",
   "default_opportunity_sales_stage",
   "default_lead_owner",
   "direct_lead_source",
@@ -96,6 +97,14 @@
    "fieldtype": "Link",
    "label": "Default Territory",
    "options": "Territory"
+  },
+  {
+   "default": "IndiaMART",
+   "description": "Set on Prospect.custom_customer_source for every Prospect created / updated from IndiaMART",
+   "fieldname": "default_customer_source",
+   "fieldtype": "Data",
+   "label": "Customer Source",
+   "reqd": 1
   },
   {
    "description": "Default sales stage when creating Opportunity from Prospect",
