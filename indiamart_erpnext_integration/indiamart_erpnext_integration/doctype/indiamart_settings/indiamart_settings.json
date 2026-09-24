@@ -12,9 +12,13 @@
   "glusr_mobile",
   "glusr_mobile_key",
   "section_break_4",
-  "default_lead_owner",
-  "default_opportunity_sales_stage",
+  "default_prospect_owner",
+  "default_company",
   "column_break_5",
+  "default_customer_group",
+  "default_territory",
+  "default_opportunity_sales_stage",
+  "default_lead_owner",
   "direct_lead_source",
   "buy_lead_source",
   "call_lead_source"
@@ -22,7 +26,7 @@
  "fields": [
   {
    "default": "0",
-   "description": "Pulls lead every 5 minutes",
+   "description": "Pulls IndiaMART enquiries every 6 minutes and creates / updates Prospect",
    "fieldname": "enabled",
    "fieldtype": "Check",
    "label": "Enabled"
@@ -30,7 +34,7 @@
   {
    "fieldname": "section_break_4",
    "fieldtype": "Section Break",
-   "label": "Lead Mapping Detail"
+   "label": "Prospect Mapping Detail"
   },
   {
    "description": "This is the primary mobile number of your account registered with IndiaMART. This is a mandatory input parameter.",
@@ -50,69 +54,98 @@
    "mandatory_depends_on": "enabled"
   },
   {
-   "description": "It decides the new start time i.e. start time='Last API Call Time' - 5 minutes.\nand  new 'Last API Call Time' will be now time.\nApp sets it automatically. You need not set it",
+   "description": "Updated automatically after each successful API call. Used as the start of the next pull window.",
    "fieldname": "last_api_call_time",
    "fieldtype": "Datetime",
-   "label": "Last API Call Time"
+   "label": "Last API Call Time",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_5",
-   "fieldtype": "Column Break",
-   "label": "<b>Indiamart Query Type Mapping</b>"
+   "fieldtype": "Column Break"
   },
   {
-   "fieldname": "default_lead_owner",
+   "description": "Set as Prospect Owner on every new Prospect created from IndiaMART",
+   "fieldname": "default_prospect_owner",
    "fieldtype": "Link",
-   "label": "Default Lead Owner",
+   "label": "Default Prospect Owner",
    "options": "User",
    "reqd": 1
+  },
+  {
+   "description": "Company used when creating Prospect. Falls back to user / global default company if blank.",
+   "fieldname": "default_company",
+   "fieldtype": "Link",
+   "label": "Default Company",
+   "options": "Company"
   },
   {
    "fieldname": "column_break_2",
    "fieldtype": "Column Break"
   },
   {
-   "description": "QType: W (Direct) ",
-   "fieldname": "direct_lead_source",
+   "description": "Optional default Customer Group for new Prospects",
+   "fieldname": "default_customer_group",
    "fieldtype": "Link",
-   "label": "Direct Lead Source",
-   "options": "Lead Source",
-   "reqd": 1
+   "label": "Default Customer Group",
+   "options": "Customer Group"
   },
   {
-   "description": "QType: B  (Consumed Buylead)",
-   "fieldname": "buy_lead_source",
+   "description": "Used when IndiaMART state does not match an existing Territory",
+   "fieldname": "default_territory",
    "fieldtype": "Link",
-   "label": "Buy Lead Source",
-   "options": "Lead Source",
-   "reqd": 1
+   "label": "Default Territory",
+   "options": "Territory"
   },
   {
-   "description": "QType: P (CALL)",
-   "fieldname": "call_lead_source",
-   "fieldtype": "Link",
-   "label": "CALL Lead Source",
-   "options": "Lead Source",
-   "reqd": 1
-  },
-  {
-   "description": "When an existing lead is updated, an opportunity gets created based on lead status. \nDefine  default opportunity sales stage for such lead",
+   "description": "Default sales stage when creating Opportunity from Prospect",
    "fieldname": "default_opportunity_sales_stage",
    "fieldtype": "Link",
    "label": "Default Opportunity Sales Stage",
-   "options": "Sales Stage",
-   "reqd": 1
+   "options": "Sales Stage"
   },
   {
    "fieldname": "api_access_detail_section",
    "fieldtype": "Section Break",
    "label": "API Access Detail"
+  },
+  {
+   "fieldname": "default_lead_owner",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Default Lead Owner (Legacy)",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "direct_lead_source",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Direct Lead Source (Legacy)",
+   "options": "Lead Source",
+   "read_only": 1
+  },
+  {
+   "fieldname": "buy_lead_source",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Buy Lead Source (Legacy)",
+   "options": "Lead Source",
+   "read_only": 1
+  },
+  {
+   "fieldname": "call_lead_source",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "CALL Lead Source (Legacy)",
+   "options": "Lead Source",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-07-02 09:37:08.050179",
+ "modified": "2026-09-24 09:40:00.000000",
  "modified_by": "Administrator",
  "module": "Indiamart Erpnext Integration",
  "name": "Indiamart Settings",
