@@ -104,7 +104,7 @@
    "fieldname": "default_customer_source",
    "fieldtype": "Link",
    "label": "Customer Source",
-   "options": "Lead Source",
+   "options": "Customer Source",
    "reqd": 1
   },
   {
