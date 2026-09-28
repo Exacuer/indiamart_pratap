@@ -165,11 +165,11 @@ def fetch_indiamart_data_and_make_integration_request(api_url,now_api_call_time)
 		status='Queued'
 	elif _is_rate_limit_message(error_message):
 		frappe.db.set_value('Integration Request', integration_request.name, 'status', 'Cancelled')
-		frappe.db.set_value('Indiamart Settings','Indiamart Settings', 'last_api_call_time', now_datetime())
+		# frappe.db.set_value('Indiamart Settings','Indiamart Settings', 'last_api_call_time', now_datetime())
 		status='Failed'
 	elif _is_no_leads_message(error_message):
 		frappe.db.set_value('Integration Request', integration_request.name, 'status', 'Cancelled')
-		frappe.db.set_value('Indiamart Settings','Indiamart Settings', 'last_api_call_time', now_api_call_time)
+		# frappe.db.set_value('Indiamart Settings','Indiamart Settings', 'last_api_call_time', now_api_call_time)
 		status='Failed'
 	else:
 		frappe.db.set_value('Integration Request', integration_request.name, 'status', 'Failed')

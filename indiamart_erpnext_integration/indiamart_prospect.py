@@ -265,6 +265,8 @@ def _apply_indiamart_fields(doc, lead_values):
 	settings = frappe.get_cached_doc("Indiamart Settings")
 	if settings.get("default_customer_group") and not doc.customer_group:
 		doc.customer_group = settings.default_customer_group
+	if settings.get("sub_category") and not doc.custom_subcategory:
+		doc.custom_subcategory = settings.sub_category
 
 	owner = get_prospect_owner()
 	if owner and not doc.prospect_owner:

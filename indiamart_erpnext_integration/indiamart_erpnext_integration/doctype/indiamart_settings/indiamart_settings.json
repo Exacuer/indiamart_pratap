@@ -18,6 +18,7 @@
   "default_customer_group",
   "default_territory",
   "default_customer_source",
+  "sub_category",
   "default_opportunity_sales_stage",
   "default_lead_owner",
   "direct_lead_source",
@@ -150,12 +151,21 @@
    "label": "CALL Lead Source (Legacy)",
    "options": "Lead Source",
    "read_only": 1
+  },
+  {
+   "default": "IndiaMart",
+   "description": "Set on Prospect.sub_category for every Prospect created / updated from IndiaMART",
+   "fieldname": "sub_category",
+   "fieldtype": "Link",
+   "label": "Sub Category",
+   "options": "Sub-category",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-24 09:40:00.000000",
+ "modified": "2026-09-28 11:55:31.451732",
  "modified_by": "Administrator",
  "module": "Indiamart Erpnext Integration",
  "name": "Indiamart Settings",
@@ -172,7 +182,9 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }
